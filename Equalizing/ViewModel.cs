@@ -276,17 +276,14 @@ namespace Equalizing
                             result = DBMethods.TestEqualizingData(dataBase, terminalCodeEqualizing, cardNumEqualizing, spendBonusEqualizing.ToString().Replace(',', '.'));
 
                             if (!String.IsNullOrEmpty(result))
-                                MessageBox.Show(result);
+                                MessageBox.Show(result, "Ошибка");
                             
                             else
                             {
-                                result = DBMethods.CreateEqualizing(dataBase, serverAddr, redmineTicket, dateEqualizing, cardNumEqualizing, terminalCodeEqualizing, billSumEqualizing.ToString().Replace(',', '.'), 
+                                result = EqualizingProcess.CreateEqualizingAndConfirm(dataBase, serverAddr, redmineTicket, dateEqualizing, cardNumEqualizing, terminalCodeEqualizing, billSumEqualizing.ToString().Replace(',', '.'), 
                                     spendBonusEqualizing.ToString().Replace(',', '.'), earnBonusEqualizing.ToString().Replace(',', '.'), organizerFeeEqualizing.ToString().Replace(',', '.'));
 
-                                if (!String.IsNullOrEmpty(result))
-                                    MessageBox.Show(result);
-                                else
-                                    MessageBox.Show("Корректировка проведена успешно и подтверждена!");
+                                MessageBox.Show(result, "Инфо");
 
                                 cardNumEqualizing = String.Empty;
                             }

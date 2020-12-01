@@ -78,6 +78,7 @@
     <Compile Include="Crypto.cs" />
     <Compile Include="DBMethods.cs" />
     <Compile Include="DBResult.cs" />
+    <Compile Include="EqualizingProcess.cs" />
     <Compile Include="GetProfiles.cs" />
     <Compile Include="Requests.cs" />
     <Compile Include="ResponseBMS.cs" />

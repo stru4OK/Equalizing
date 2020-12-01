@@ -4,7 +4,7 @@ namespace Equalizing
 {
     public class ConfirmRequest
     {
-        public static string BMSConfirmOperation(string oracleDBConnection, string serverAddr, Guid request_id)
+        public static string BMSConfirmOperation(string oracleDBConnection, string serverAddr, string request_id)
         {
             string result = String.Empty;
 
