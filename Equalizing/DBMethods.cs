@@ -65,7 +65,55 @@ namespace Equalizing
         {
             string result, bill_id, good_id;
             
-            result = DataBaseSQL(oracleDBConnection, "insert into summary_data (request_id, request_date, ins_date, ext_request_id, request_type, request_state, request_state_code, "
+            bill_id = DataBaseSQL(oracleDBConnection, "select bills$seq.nextval as data from dual", true);
+            good_id = DataBaseSQL(oracleDBConnection, "select goods$seq.nextval as data from dual", true);
+
+            result = DataBaseSQL(oracleDBConnection, "insert into requests (request_id, ext_request_id, request_date, request_state, request_type, card_id, terminal_id, request_state_code, employee_code, ins_date, upd_date) "
+                + "select '" + request_id + "', '" + request_id + "', to_date('" + date + "', 'dd.mm.yyyy hh24:mi:ss'), 'READY', 'PAYMENT_AND_CONFIRM', (select card_id from cards where card_num = '" + cardNum + "' "
+                + "and is_delete = 0 and is_locked = 0), (select terminal_id from terminals where code = '" + terminalCode + "'), 'OK', 'EQUALIZING', sysdate, sysdate from dual", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "insert into bills (bill_id, bill_code, bill_date, bill_length, bill_sum, is_spend_bonus, request_id, ins_date, upd_date, is_processed, state) "
+                + "select " + bill_id + ", '" + redmineTicket + "', to_date('" + date + "', 'dd.mm.yyyy hh24:mi:ss'), 1, " + billSum + ", "
+                + "(select(case when " + spendBonus + " > 0 then 1 else 0 end) from dual), '" + request_id + "', sysdate, sysdate, 0, 'PROCESSED' from dual", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "insert into goods (good_id, bill_id, good_code, amount, good_title, is_discount_available, order_num, position_price, ins_date, upd_date, good_type, state) "
+                + "select " + good_id + ", " + bill_id + ", '" + redmineTicket + "', 1, '" + redmineTicket + "', 0, 1, " + billSum + ", sysdate, sysdate, 'GOOD', 'CONFIRMED'  from dual", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "insert into transactions (transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
+                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'DEBIT', 'READY', " + earnBonus + ", (select account_id from accounts where account_type = 'GLOBAL' "
+                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
+                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'PAYMENT_DEBIT', '" + request_id + "', "
+                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + earnBonus + " > 0", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "insert into transactions(transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
+                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'CREDIT', 'READY', " + organizerFee + ", (select account_id from accounts where account_type = 'GLOBAL' "
+                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
+                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'ORGANIZER_FEE', '" + request_id + "', "
+                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + organizerFee + " > 0", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "insert into transactions(transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
+                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'CREDIT', 'READY', " + spendBonus + ", (select account_id from accounts where account_type = 'GLOBAL' "
+                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
+                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'PAYMENT_CREDIT', '" + request_id + "', "
+                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + spendBonus + " > 0", false);
+
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            result += DataBaseSQL(oracleDBConnection, "update accounts set amount = amount + " + earnBonus + " - " + organizerFee + ", balance = balance - " 
+                + spendBonus + ", locked_amount = locked_amount + " + earnBonus + " - " + organizerFee + " + " + spendBonus + " where account_type = 'GLOBAL' "
+                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)", false);
+                        
+            result += DataBaseSQL(oracleDBConnection, "insert into summary_data (request_id, request_date, ins_date, ext_request_id, request_type, request_state, request_state_code, "
                 + "is_offline, club_id, retail_network_id, legacy_client_id, retail_point_id, terminal_id, cli_id, fio, phone_mobile, card_num, card_mask, card_type, rolled_card_type, "
                 + "is_card_locked, bill_date, bill_code, bill_sum, bill_sum_with_bonus, cashbacks_sum, bonus_sum, bonus_sum_ep, organizer_fee, bonus_sum_minus_org_fee, bonus_credit_sum, "
                 + "extra_amount_withdraw, extra_amount_reverse, extra_amount_withdraw_fee) "
@@ -83,56 +131,6 @@ namespace Equalizing
                 + organizerFee + ", " + earnBonus + " - " + organizerFee + ", " + spendBonus + ", 0, 0, 0 from dual where exists (select cli_id from cards where card_num = '" 
                 + cardNum + "' and is_delete = 0 and is_locked = 0)", false);
 
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            bill_id = DataBaseSQL(oracleDBConnection, "select bills$seq.nextval as data from dual", true);
-            good_id = DataBaseSQL(oracleDBConnection, "select goods$seq.nextval as data from dual", true);
-
-            result = DataBaseSQL(oracleDBConnection, "insert into requests (request_id, ext_request_id, request_date, request_state, request_type, card_id, terminal_id, request_state_code, employee_code, ins_date, upd_date) "
-                + "select '" + request_id + "', '" + request_id + "', to_date('" + date + "', 'dd.mm.yyyy hh24:mi:ss'), 'READY', 'PAYMENT_AND_CONFIRM', (select card_id from cards where card_num = '" + cardNum + "' "
-                + "and is_delete = 0 and is_locked = 0), (select terminal_id from terminals where code = '" + terminalCode + "'), 'OK', 'EQUALIZING', sysdate, sysdate from dual", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "insert into bills (bill_id, bill_code, bill_date, bill_length, bill_sum, is_spend_bonus, request_id, ins_date, upd_date, is_processed, state) "
-                + "select " + bill_id + ", '" + redmineTicket + "', to_date('" + date + "', 'dd.mm.yyyy hh24:mi:ss'), 1, " + billSum + ", "
-                + "(select(case when " + spendBonus + " > 0 then 1 else 0 end) from dual), '" + request_id + "', sysdate, sysdate, 0, 'PROCESSED' from dual", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "insert into goods (good_id, bill_id, good_code, amount, good_title, is_discount_available, order_num, position_price, ins_date, upd_date, good_type, state) "
-                + "select " + good_id + ", " + bill_id + ", '" + redmineTicket + "', 1, '" + redmineTicket + "', 0, 1, " + billSum + ", sysdate, sysdate, 'GOOD', 'CONFIRMED'  from dual", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "insert into transactions (transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
-                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'DEBIT', 'READY', " + earnBonus + ", (select account_id from accounts where account_type = 'GLOBAL' "
-                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
-                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'PAYMENT_DEBIT', '" + request_id + "', "
-                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + earnBonus + " > 0", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "insert into transactions(transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
-                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'CREDIT', 'READY', " + organizerFee + ", (select account_id from accounts where account_type = 'GLOBAL' "
-                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
-                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'ORGANIZER_FEE', '" + request_id + "', "
-                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + organizerFee + " > 0", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "insert into transactions(transaction_id, operation_type, transaction_state, amount, account_id, good_id, card_id, bill_id, ins_date, upd_date, transaction_kind, "
-                + "request_id, retail_point_id, bonus_type) select transactions$seq.nextval, 'CREDIT', 'READY', " + spendBonus + ", (select account_id from accounts where account_type = 'GLOBAL' "
-                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)), " + good_id + ", "
-                + "(select card_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0), " + bill_id + ", sysdate, sysdate, 'PAYMENT_CREDIT', '" + request_id + "', "
-                + "(select retail_point_id from terminals where code = '" + terminalCode + "'), 'CASH' from dual where " + spendBonus + " > 0", false);
-
-            if (!String.IsNullOrEmpty(result)) return result;
-
-            result = result + DataBaseSQL(oracleDBConnection, "update accounts set amount = amount + " + earnBonus + " - " + organizerFee + ", balance = balance - " 
-                + spendBonus + ", locked_amount = locked_amount + " + earnBonus + " - " + organizerFee + " + " + spendBonus + " where account_type = 'GLOBAL' "
-                + "and cli_id = (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)", false);
-                        
             return result;
         }
 
@@ -196,12 +194,14 @@ namespace Equalizing
 
                 return DBResult;
             }
-
             catch (OracleException ex)
             {
-                //12519 - TNS refused connection
-                if (ex.Number == 12519)
+                //12519, 12520 - TNS refused connection
+                if (ex.Number == 12519 || ex.Number == 12520)
+                {
+                    Thread.Sleep(1000);
                     DBResult = DBSQL(oracleDBConnection, sql, needResult);
+                }
                 else
                 {
                     Trace.TraceWrite("Execution was FAIL: " + ex.ToString() + "\n\n");
