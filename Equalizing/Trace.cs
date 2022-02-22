@@ -9,7 +9,7 @@ namespace Equalizing
         {
             StreamWriter files = new StreamWriter("Trace.txt", true);
 
-            files.WriteLine(DateTime.Now.ToString("HH:mm:ss") + " : \n" + text + "\n");
+            files.WriteLine(DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss") + " : \n" + text + "\n");
             files.Flush();
             files.Close();
             return 0;

@@ -44,18 +44,44 @@ namespace Equalizing
 
         public static string TestEqualizingData(string oracleDBConnection, string code, string cardNum, string spendBonus)
         {
-            string result = string.Empty;
+            String result = string.Empty, res = string.Empty;
+            String[] sqls = new string[] {"select 'Терминал заблокирован' as data from dual where exists(select * from terminals where code = '" + code + "' and is_locked = 1)",
+            "select 'Такого терминала нет в данной БД' as data from dual where not exists(select * from terminals where code = '" + code + "')",
+            "select 'Такой карты нет в данной БД' as data from dual where not exists(select * from cards where card_num = '" + cardNum + "')",
+            "select 'Карта заблокирована' as data from dual where exists(select * from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 1)",
+            "select 'Счет клиента в результате корректировки окажется в минусе' as data from dual where 0 > (select balance - " + spendBonus + " from accounts where account_type = 'GLOBAL' " +
+            "and cli_id in (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0))",
+            "select 'Счет клиента в минусе' as data from dual where 0 > (select balance from accounts where account_type = 'GLOBAL' " +
+            "and cli_id in (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0))",
+            "select 'У введенной карты нет счетов в данной БД' as data from dual where not exists(select * from accounts " +
+            "where cli_id in (select cli_id from cards where card_num = '" + cardNum + "'))" };
+            /*sql = "select data from (select 'Терминал заблокирован' as data from dual where exists(select * from terminals where code = '" + code + "' and is_locked = 1) "
+    + "union select 'Такого терминала нет в данной БД' as data from dual where not exists(select * from terminals where code = '" + code + "') "
+    + "union select 'Такой карты нет в данной БД' as data from dual where not exists(select * from cards where card_num = '" + cardNum + "') "
+    + "union select 'Карта заблокирована' as data from dual where exists(select * from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 1) "
+    + "union select 'Счет клиента в результате корректировки окажется в минусе' as data from dual where 0 > (select balance - " + spendBonus + " from accounts where account_type = 'GLOBAL' "
+    + "and cli_id in (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)) "
+    + "union select 'Счет клиента в минусе' as data from dual where 0 > (select balance from accounts where account_type = 'GLOBAL' "
+    + "and cli_id in (select cli_id from cards where card_num = '" + cardNum + "' and is_delete = 0 and is_locked = 0)) "
+    + "union select 'У введенной карты нет счетов в данной БД' as data from dual where not exists(select * from accounts where cli_id in (select cli_id from cards where card_num = '"
+    + cardNum + "')))";*/
 
-            result = DataBaseSQL(oracleDBConnection, "select data from (select 'Терминал заблокирован' as data from dual where exists(select * from terminals where code = '" + code + "' and is_locked = 1) "
-                + "union select 'Такого терминала нет в данной БД' as data from dual where not exists(select * from terminals where code = '" + code + "') "
-                + "union select 'Такой карты нет в данной БД' as data from dual where not exists(select * from cards where card_num = replace('" + cardNum + "', chr(32), '')) "
-                + "union select 'Карта заблокирована' as data from dual where not exists(select * from cards where card_num = replace('" + cardNum + "', chr(32), '') and is_delete = 0 and is_locked = 0) "
-                + "union select 'Счет клиента в результате корректировки окажется в минусе' as data from dual where 0 > (select balance - " + spendBonus + " from accounts where account_type = 'GLOBAL' "
-                + "and cli_id in (select cli_id from cards where card_num = replace('" + cardNum + "', chr(32), '') and is_delete = 0 and is_locked = 0)) "
-                + "union select 'Счет клиента в минусе' as data from dual where 0 > (select balance from accounts where account_type = 'GLOBAL' "
-                + "and cli_id in (select cli_id from cards where card_num = replace('" + cardNum + "', chr(32), '') and is_delete = 0 and is_locked = 0)) "
-                + "union select 'У введенной карты нет счетов в данной БД' as data from dual where not exists(select * from accounts where cli_id in (select cli_id from cards where card_num = replace('"
-                + cardNum + "', chr(32), ''))))", true);
+            foreach (String sql in sqls)
+            {
+                res = DataBaseSQL(oracleDBConnection, sql, true);
+
+                if(!String.IsNullOrEmpty(res))
+                {
+                    if(!String.IsNullOrEmpty(result))
+                        result += "\n" + DataBaseSQL(oracleDBConnection, sql, true);
+                    else
+                        result += DataBaseSQL(oracleDBConnection, sql, true);
+                }
+
+                if (!String.IsNullOrEmpty(result))
+                    Trace.TraceWrite("Found problem with equalizing:\n\nDB:\n" + oracleDBConnection.Remove(oracleDBConnection.IndexOf(";Password"))
+                        + "\n\nSQL:\n" + sql + "\n\nResult:\n" + result);
+            }
 
             return result;
         }
@@ -204,7 +230,7 @@ namespace Equalizing
                 }
                 else
                 {
-                    Trace.TraceWrite("Execution was FAIL: " + ex.ToString() + "\n\n");
+                    Trace.TraceWrite("Execution was FAIL: \nSQL:\n" + sql + "\n\nERROR:\n" + ex.ToString() + "\n\n");
                     DBResult.result = "Ошибка исполнения скрипта в БД\n";
                     DBResult.state = Variables.ERROR;
                 }

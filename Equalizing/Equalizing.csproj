@@ -84,6 +84,7 @@
     <Compile Include="ResponseBMS.cs" />
     <Compile Include="Trace.cs" />
     <Compile Include="UpdateMethods.cs" />
+    <Compile Include="Utility.cs" />
     <Compile Include="Variables.cs" />
     <Compile Include="ViewModel.cs" />
     <Page Include="MainWindow.xaml">

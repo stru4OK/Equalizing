@@ -57,10 +57,13 @@ namespace Equalizing
                 HttpWebResponse response = (HttpWebResponse)req.GetResponse();
                 Stream dataStreamResp = response.GetResponseStream();
                 StreamReader reader = new StreamReader(dataStreamResp, Encoding.Default);
-                Response = JsonConvert.DeserializeObject<ResponseBMS>(reader.ReadToEnd());
+                String resp = reader.ReadToEnd();
+                Response = JsonConvert.DeserializeObject<ResponseBMS>(resp);
 
-                Trace.TraceWrite("Responce on confirm request:\nmessage = " + Response.BpsResponse.message + ", state = " 
-                    + Response.BpsResponse.state + ", stateCode = " + Response.BpsResponse.stateCode + "");
+                Trace.TraceWrite("Request:\n" + request);
+                Trace.TraceWrite("Response:\n" + resp);
+                //Trace.TraceWrite("Responce on confirm request:\nmessage = " + Response.BpsResponse.message + ", state = " 
+                //    + Response.BpsResponse.state + ", stateCode = " + Response.BpsResponse.stateCode + "");
 
                 reader.Close();
                 dataStreamResp.Close();
@@ -76,13 +79,17 @@ namespace Equalizing
                 {
                     Stream streamData = e.Response.GetResponseStream();
                     var reader = new StreamReader(streamData);
+                    String resp = reader.ReadToEnd();
 
-                    Response = JsonConvert.DeserializeObject<ResponseBMS>(reader.ReadToEnd());
+                    Response = JsonConvert.DeserializeObject<ResponseBMS>(resp);
                     reader.Close();
                     streamData.Close();
 
-                    Trace.TraceWrite("Responce on confirm request:\nmessage = " + Response.BpsResponse.message + ", state = "
-                    + Response.BpsResponse.state + ", stateCode = " + Response.BpsResponse.stateCode + "");
+                    Trace.TraceWrite("Request:\n" + request);
+                    Trace.TraceWrite("Response:\n" + resp);
+
+                    /*Trace.TraceWrite("Responce on confirm request:\nmessage = " + Response.BpsResponse.message + ", state = "
+                    + Response.BpsResponse.state + ", stateCode = " + Response.BpsResponse.stateCode + "");*/
                 }
                 catch (Exception ex)
                 {

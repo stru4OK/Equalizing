@@ -4,7 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:Equalizing"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        Title="Корректировка"
+        Title="{Binding title,
+                        UpdateSourceTrigger=PropertyChanged}"
         Width="628"
         Height="455"
         ResizeMode="NoResize"
@@ -36,7 +37,7 @@
                  HorizontalContentAlignment="Center"
                  VerticalContentAlignment="Center"
                  Background="White"
-                 BorderBrush="#FFACCD84"
+                 BorderBrush="{Binding dateBorder}"
                  BorderThickness="3"
                  FontFamily="Arial"
                  FontSize="18.667"

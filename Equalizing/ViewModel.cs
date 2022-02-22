@@ -2,6 +2,7 @@
 using GalaSoft.MvvmLight.Command;
 using System;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 
@@ -12,34 +13,33 @@ namespace Equalizing
         public ObservableCollection<string> ConfigProfiles { get; private set; }
         Profiles[] Profiles = new Profiles[] { };
 
-        private string dataBase = String.Empty;
-        private string serverAddr = String.Empty;
+        private string dataBase = String.Empty, serverAddr = String.Empty;
 
-        private string _cardNumBorder = "#FFACCD84";
-        private string _terminalCodeBorder = "#FFACCD84";
-        private string _dateEqualizing = DateTime.Now.ToString();
-        private string _cardNumEqualizing = String.Empty;
-        private string _terminalCodeEqualizing = String.Empty;
-        private string _redmineTicket = "Задача-";
+        private string _cardNumBorder = "#FFACCD84", _terminalCodeBorder = "#FFACCD84", _dateBorder = "#FFACCD84";
+        private string _dateEqualizing = DateTime.Now.ToString(), _cardNumEqualizing = String.Empty, 
+            _terminalCodeEqualizing = String.Empty, _redmineTicket = "Задача-", 
+            _title = "Equalizing v." + Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-        private double _billSumEqualizing = 0.00;
-        private double _spendBonusEqualizing = 0.00;
-        private double _earnBonusEqualizing = 0.00;
-        private double _organizerFeeEqualizing = 0.00;
+        private double _billSumEqualizing = 0.00, _spendBonusEqualizing = 0.00, _earnBonusEqualizing = 0.00, _organizerFeeEqualizing = 0.00;
 
         private int _selectItem = 0;
-
         private bool _isEnabledUpdate = true;
 
-        private ICommand _Update;
-        private ICommand _createEqualizing;
+        private ICommand _Update, _createEqualizing;
 
         public ViewModel()
         {
-            if (UpdateMethods.Update() == 0)
+            switch(UpdateMethods.Update())
             {
-                System.Diagnostics.Process.Start(Application.ResourceAssembly.Location);
-                Application.Current.Shutdown();
+                case 0:
+                    System.Diagnostics.Process.Start(Application.ResourceAssembly.Location);
+                    Application.Current.Shutdown();
+                    break;
+                case 2:
+                    _title += " (Last version)";
+                    break;
+                default:
+                    break;
             }
 
             ConfigProfiles = new ObservableCollection<string> { };
@@ -65,6 +65,19 @@ namespace Equalizing
             {
                 _selectItem = value;
                 RaisePropertyChanged(() => selectItem);
+            }
+        }
+
+        public string title
+        {
+            get
+            {
+                return _title;
+            }
+            set
+            {
+                _title = value;
+                RaisePropertyChanged(() => title);
             }
         }
 
@@ -105,6 +118,19 @@ namespace Equalizing
                 _terminalCodeBorder = value;
                 RaisePropertyChanged(() => terminalCodeBorder);
             }
+        }       
+        
+        public string dateBorder
+        {
+            get
+            {
+                return _dateBorder;
+            }
+            set
+            {
+                _dateBorder = value;
+                RaisePropertyChanged(() => dateBorder);
+            }
         }
 
         public string dateEqualizing
@@ -128,7 +154,7 @@ namespace Equalizing
             }
             set
             {
-                _cardNumEqualizing = value;
+                _cardNumEqualizing = value.Trim();
                 RaisePropertyChanged(() => cardNumEqualizing);
             }
         }
@@ -141,7 +167,7 @@ namespace Equalizing
             }
             set
             {
-                _terminalCodeEqualizing = value;
+                _terminalCodeEqualizing = value.Trim();
                 RaisePropertyChanged(() => terminalCodeEqualizing);
             }
         }
@@ -230,7 +256,7 @@ namespace Equalizing
                 return _createEqualizing ?? (_createEqualizing = new RelayCommand(() =>
                 {
                     string result = String.Empty;
-                    bool cardNumInput = false, terminalCodeInput = false;
+                    bool cardNumInput = false, terminalCodeInput = false, dateInput = false;
 
                     if (!String.IsNullOrEmpty(cardNumEqualizing))
                     {
@@ -264,8 +290,19 @@ namespace Equalizing
                         terminalCodeInput = false;
                         terminalCodeBorder = "Red";
                     }
-                    
-                    if (cardNumInput & terminalCodeInput)
+
+                    if(Utility.isCorrectDate(dateEqualizing))
+                    {
+                        dateInput = true;
+                        dateBorder = "#FFACCD84";
+                    }
+                    else
+                    {
+                        dateInput = false;
+                        dateBorder = "Red";
+                    }
+
+                    if (cardNumInput && terminalCodeInput && dateInput)
                     {
                         result = DBMethods.TestConnectionDataBase(dataBase);
                         
@@ -277,7 +314,6 @@ namespace Equalizing
 
                             if (!String.IsNullOrEmpty(result))
                                 MessageBox.Show(result, "Ошибка");
-                            
                             else
                             {
                                 result = EqualizingProcess.CreateEqualizingAndConfirm(dataBase, serverAddr, redmineTicket, dateEqualizing, cardNumEqualizing, terminalCodeEqualizing, billSumEqualizing.ToString().Replace(',', '.'), 

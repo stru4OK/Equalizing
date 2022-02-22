@@ -8,7 +8,7 @@ namespace Equalizing
         {
             string result = String.Empty;
 
-            if (Requests.GetResultBMSAPI(Requests.BMSRequest("GET", serverAddr.Remove(serverAddr.Length - 5, 5) + "/do.PROCESS_REQUEST/param={\"REQUEST_ID\":\"" + request_id
+            if (Requests.GetResultBMSAPI(Requests.BMSRequest(Variables.GET, serverAddr.Remove(serverAddr.Length - 5, 5) + "/do.PROCESS_REQUEST/param={\"REQUEST_ID\":\"" + request_id
                 + "\"}", String.Empty, String.Empty, String.Empty)) == 1)
                 result = "Ошибка при подтверждении корректировки";
 
